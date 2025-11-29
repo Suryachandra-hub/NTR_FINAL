@@ -1,0 +1,8 @@
+{
+  "name": "NTR WORLD",
+  "description": "The Ultimate Jr NTR Fan Universe. A cinematic, community-driven platform featuring Fan ID cards, movie timeline, wallpaper generator, and emergency donor network coordination.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
