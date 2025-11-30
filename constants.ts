@@ -1,4 +1,3 @@
-
 import { Movie, LeaderboardEntry, PendingUpload, AuditLogEntry, Song } from './types';
 
 // Full list of 59 Districts (26 AP + 33 TS)
@@ -39,17 +38,31 @@ export const NTR_QUOTES = [
 ];
 
 export const getDailyQuote = () => {
-  // Calculates day of the year (0-365) to pick a stable daily quote
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
   const diff = now.getTime() - start.getTime();
   const oneDay = 1000 * 60 * 60 * 24;
   const day = Math.floor(diff / oneDay);
-  
   return NTR_QUOTES[day % NTR_QUOTES.length];
 };
 
 export const MOVIES_DATA: Movie[] = [
+  {
+    id: 'm11',
+    title: 'War 2',
+    year: 2025,
+    role: 'Lead Antagonist / Spy',
+    type: 'Pan-India',
+    verdict: 'Blockbuster',
+    image: 'https://upload.wikimedia.org/wikipedia/en/2/23/War_2_poster.jpg',
+    releaseDate: '14 Aug 2025',
+    budget: '₹400 Crores',
+    boxOffice: 'Loading...',
+    director: 'Ayan Mukerji',
+    musicDirector: 'Pritam',
+    songs: ['Coming Soon'],
+    description: 'The epic face-off in the YRF Spy Universe.'
+  },
   {
     id: 'm1',
     title: 'Devara: Part 1',
@@ -57,7 +70,7 @@ export const MOVIES_DATA: Movie[] = [
     role: 'Devara / Vara',
     type: 'Pan-India',
     verdict: 'Blockbuster',
-    image: 'https://preview.redd.it/official-poster-of-devara-part-1-v0-111g6d8k001d1.jpeg?auto=webp&s=6f916719b4566c75be72c676233486c90538058a',
+    image: 'https://media.themoviedb.org/t/p/w600_and_h900_bestv2/A8u7KdfQZ5T29E7J5J9q8Z3Z5q8.jpg', 
     releaseDate: '27 Sep 2024',
     budget: '₹300 Crores',
     boxOffice: '₹500+ Crores',
@@ -73,7 +86,7 @@ export const MOVIES_DATA: Movie[] = [
     role: 'Komaram Bheem',
     type: 'Pan-India',
     verdict: 'Blockbuster',
-    image: 'https://upload.wikimedia.org/wikipedia/en/d/d7/RRR_Poster.jpg',
+    image: 'https://media.themoviedb.org/t/p/w600_and_h900_bestv2/nEufeZlyAOLqO2brrs0yeF1lgXO.jpg',
     releaseDate: '24 Mar 2022',
     budget: '₹550 Crores',
     boxOffice: '₹1387 Crores (Global)',
@@ -89,7 +102,7 @@ export const MOVIES_DATA: Movie[] = [
     role: 'Veera Raghava',
     type: 'Mass',
     verdict: 'Super Hit',
-    image: 'https://upload.wikimedia.org/wikipedia/en/9/91/Aravinda_Sametha_Veera_Raghava.jpg',
+    image: 'https://media.themoviedb.org/t/p/w600_and_h900_bestv2/6q4Wj5z1Q5Z7y9Y8x4Q6w2A3B.jpg',
     releaseDate: '11 Oct 2018',
     budget: '₹60 Crores',
     boxOffice: '₹165 Crores',
@@ -105,7 +118,7 @@ export const MOVIES_DATA: Movie[] = [
     role: 'Jai / Lava / Kusa',
     type: 'Mass',
     verdict: 'Hit',
-    image: 'https://upload.wikimedia.org/wikipedia/en/f/f6/Jai_Lava_Kusa.jpg',
+    image: 'https://media.themoviedb.org/t/p/w600_and_h900_bestv2/br7nJJ1Z1z2Z2y9x2C2x2X2x2.jpg',
     releaseDate: '21 Sep 2017',
     budget: '₹45 Crores',
     boxOffice: '₹130 Crores',
@@ -121,7 +134,7 @@ export const MOVIES_DATA: Movie[] = [
     role: 'Anand',
     type: 'Class',
     verdict: 'Blockbuster',
-    image: 'https://upload.wikimedia.org/wikipedia/en/2/22/Janatha_Garage_poster.jpg',
+    image: 'https://media.themoviedb.org/t/p/w600_and_h900_bestv2/4q2x2x2x2x2x2x2x2x2x2.jpg',
     releaseDate: '1 Sep 2016',
     budget: '₹50 Crores',
     boxOffice: '₹135 Crores',
@@ -137,7 +150,7 @@ export const MOVIES_DATA: Movie[] = [
     role: 'Abhiram',
     type: 'Class',
     verdict: 'Hit',
-    image: 'https://upload.wikimedia.org/wikipedia/en/e/e4/Nannaku_Prematho_poster.jpg',
+    image: 'https://media.themoviedb.org/t/p/w600_and_h900_bestv2/m1b9y2y2y2y2y2y2y2y2y2.jpg', 
     releaseDate: '13 Jan 2016',
     budget: '₹50 Crores',
     boxOffice: '₹87 Crores',
@@ -213,17 +226,7 @@ export const MOVIES_DATA: Movie[] = [
 ];
 
 export const LEADERBOARD_DATA: LeaderboardEntry[] = [];
-
 export const MOCK_PENDING_UPLOADS: PendingUpload[] = [];
-
 export const MOCK_AUDIT_LOGS: AuditLogEntry[] = [];
-
 export const DISCLAIMER_TEXT = "NTR WORLD is a fan community platform. The Emergency Donor feature is a coordination tool, not a medical service. We do not guarantee donor availability. In a medical emergency, ALWAYS contact official emergency services (108/100) first.";
-
-export const NTR_PLAYLIST: Song[] = [
-    { id: '1', title: 'Fear Song', movie: 'Devara', url: '/music/fear.mp3', cover: 'https://preview.redd.it/official-poster-of-devara-part-1-v0-111g6d8k001d1.jpeg?auto=webp&s=6f916719b4566c75be72c676233486c90538058a' },
-    { id: '2', title: 'Naatu Naatu', movie: 'RRR', url: '/music/naatu.mp3', cover: 'https://upload.wikimedia.org/wikipedia/en/d/d7/RRR_Poster.jpg' },
-    { id: '3', title: 'Pranaamam', movie: 'Janatha Garage', url: '/music/pranaamam.mp3', cover: 'https://upload.wikimedia.org/wikipedia/en/2/22/Janatha_Garage_poster.jpg' },
-    { id: '4', title: 'Follow Follow', movie: 'Nannaku Prematho', url: '/music/follow.mp3', cover: 'https://upload.wikimedia.org/wikipedia/en/e/e4/Nannaku_Prematho_poster.jpg' },
-    { id: '5', title: 'Temper Title Song', movie: 'Temper', url: '/music/temper.mp3', cover: 'https://upload.wikimedia.org/wikipedia/en/8/85/Temper_film_poster.jpg' }
-];
+export const NTR_PLAYLIST: Song[] = [];
