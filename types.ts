@@ -89,7 +89,6 @@ export enum TabView {
   DASHBOARD = 'DASHBOARD',
   UPDATES = 'UPDATES', // New Feed Tab
   MOVIES = 'MOVIES',
-  // WALLPAPER REMOVED
   FANZONE = 'FANZONE',
   EMERGENCY = 'EMERGENCY',
   LEADERBOARD = 'LEADERBOARD',
@@ -134,12 +133,4 @@ export interface Story {
   createdAt: string;
   expiresAt: string; // 24 hours later
   viewers: string[];
-}
-
-export interface Song {
-  id: string;
-  title: string;
-  movie: string;
-  url: string;
-  cover?: string;
 }
