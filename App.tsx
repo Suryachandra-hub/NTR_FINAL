@@ -16,14 +16,30 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Siren, Loader2 } from 'lucide-react';
 
 const App = () => {
-  const { currentTab, currentUser, isTigerBackgroundActive, initBroadcastListener, initFeedListener, latestAlert, dismissAlert, restoreSession, isLoading, authError } = useStore();
+  const { currentTab, currentUser, isTigerBackgroundActive, initBroadcastListener, initFeedListener, latestAlert, dismissAlert, restoreSession, isLoading, authError, syncTab } = useStore();
 
-  // Restore session on mount
   useEffect(() => {
      restoreSession();
   }, []);
 
-  // Init listeners when user is logged in
+  useEffect(() => {
+    const handlePopState = () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash && Object.values(TabView).includes(hash as TabView)) {
+            syncTab(hash as TabView);
+        } else {
+            if (useStore.getState().currentUser) {
+                syncTab(TabView.DASHBOARD);
+            } else {
+                syncTab(TabView.LANDING);
+            }
+        }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
      if (currentUser) {
          initBroadcastListener();
@@ -31,7 +47,6 @@ const App = () => {
      }
   }, [currentUser]);
 
-  // Prevent full screen loader if there is an error, so user can see error message on Landing
   if (isLoading && !authError) {
       return (
           <div className="min-h-screen bg-black flex items-center justify-center">
