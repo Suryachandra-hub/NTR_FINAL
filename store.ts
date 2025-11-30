@@ -1,8 +1,8 @@
 
+
 import { create } from 'zustand';
-import { User, TabView, LeaderboardEntry, Post, Story, AuditLogEntry, Song } from './types';
+import { User, TabView, LeaderboardEntry, Post, Story, AuditLogEntry } from './types';
 import { db, getFirebaseUserByName, createFirebaseUser, subscribeToLeaderboard, getDonorsFromFirebase, updateUserDoc, subscribeToBroadcasts, subscribeToPosts, subscribeToStories, getFirebaseUserByUid, logSystemAction, updateUserRole, subscribeToLogs, deleteAllUsersExcept } from './firebase';
-import { NTR_PLAYLIST } from './constants';
 import { compareFaces } from './utils/faceAuth';
 
 const DB_KEY_USERS = 'ntr_world_users_v2'; 
@@ -30,24 +30,40 @@ const saveUserToLocal = (user: User) => {
   localStorage.setItem(DB_KEY_USERS, JSON.stringify(users));
 };
 
-// --- VOICE ASSISTANT ---
 const playWelcomeMessage = (name: string, role: string) => {
     if (!window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance();
     
-    if (role === 'super_admin') {
-        utterance.text = `Welcome back, Super Admin ${name}. System access granted.`;
-        utterance.pitch = 0.8; 
-        utterance.rate = 0.9;
-    } else {
-        utterance.text = `Welcome, Admin ${name}. Panel active.`;
-    }
-    
-    const voices = window.speechSynthesis.getVoices();
-    const maleVoice = voices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'));
-    if (maleVoice) utterance.voice = maleVoice;
+    const speak = () => {
+        const utterance = new SpeechSynthesisUtterance();
+        
+        if (role === 'super_admin') {
+            utterance.text = `Welcome back, Super Admin ${name}. System access granted.`;
+        } else {
+            utterance.text = `Welcome, Admin ${name}. Panel active.`;
+        }
+        
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => 
+            v.name.includes("Microsoft David") || 
+            v.name.includes("Google UK English Male") ||
+            v.name.includes("Daniel")
+        ) || voices.find(v => v.name.includes("Male") && v.lang.includes("en")) || voices.find(v => v.lang.includes("en"));
 
-    window.speechSynthesis.speak(utterance);
+        if (preferredVoice) {
+            utterance.voice = preferredVoice;
+            utterance.pitch = 0.5; 
+            utterance.rate = 0.9;
+            utterance.volume = 1.0;
+        }
+
+        window.speechSynthesis.speak(utterance);
+    };
+
+    if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = speak;
+    } else {
+        speak();
+    }
 };
 
 interface AppState {
@@ -66,17 +82,11 @@ interface AppState {
   isTigerBackgroundActive: boolean;
   latestAlert: { message: string, type: 'emergency' | 'info' } | null;
 
-  // Music State
-  currentSong: Song | null;
-  isPlaying: boolean;
-  showMusicPlayer: boolean;
-
   loginUser: (username: string, password?: string) => Promise<void>;
   registerUser: (fullName: string, username: string, district: string, gender: 'male' | 'female', password: string) => Promise<void>;
   registerAdmin: (fullName: string, username: string, district: string, faceDataUrl: string) => Promise<void>;
   loginAdmin: (username: string, faceDataUrl: string) => Promise<void>;
   
-  // Super Admin Actions
   assignRole: (targetUsername: string, role: 'admin' | 'user') => Promise<boolean>;
   enrollFace: (username: string, faceDataUrl: string) => Promise<void>;
   purgeUsers: () => Promise<void>;
@@ -84,17 +94,14 @@ interface AppState {
   restoreSession: () => Promise<void>;
   clearError: () => void;
   logout: () => void;
+  
   setTab: (tab: TabView) => void;
+  syncTab: (tab: TabView) => void;
+  
   toggleSidebar: () => void;
   toggleTigerBackground: () => void;
   dismissAlert: () => void;
   
-  // Music Actions
-  playSong: (song: Song) => void;
-  togglePlay: () => void;
-  nextSong: () => void;
-  toggleMusicPlayerVisibility: () => void;
-
   updateDonorStatus: (status: boolean, bloodGroup: string, phone: string) => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
   fetchLeaderboard: () => void;
@@ -119,26 +126,9 @@ export const useStore = create<AppState>((set, get) => ({
   isTigerBackgroundActive: true, 
   latestAlert: null,
   
-  // Music Initial State
-  currentSong: null,
-  isPlaying: false,
-  showMusicPlayer: true,
-
   clearError: () => set({ authError: null }),
   toggleTigerBackground: () => set(state => ({ isTigerBackgroundActive: !state.isTigerBackgroundActive })),
   dismissAlert: () => set({ latestAlert: null }),
-
-  // Music Actions
-  playSong: (song) => set({ currentSong: song, isPlaying: true, showMusicPlayer: true }),
-  togglePlay: () => set(state => ({ isPlaying: !state.isPlaying })),
-  nextSong: () => {
-      const { currentSong } = get();
-      if (!currentSong) return;
-      const idx = NTR_PLAYLIST.findIndex(s => s.id === currentSong.id);
-      const nextIdx = (idx + 1) % NTR_PLAYLIST.length;
-      set({ currentSong: NTR_PLAYLIST[nextIdx], isPlaying: true });
-  },
-  toggleMusicPlayerVisibility: () => set(state => ({ showMusicPlayer: !state.showMusicPlayer })),
 
   restoreSession: async () => {
       const uid = localStorage.getItem(SESSION_KEY);
@@ -149,17 +139,16 @@ export const useStore = create<AppState>((set, get) => ({
       else { user = getLocalUsers().find(u => u.uid === uid) || null; }
 
       if (user) {
-          // --- FORCE SUPER ADMIN FOR SURYA ON RELOAD ---
           if (user.username.toLowerCase() === 'surya') {
               user.role = 'super_admin';
               user.fanId = 'NTR-0001';
-              // Sync DB in background if needed
               if (db) updateUserDoc(user.uid, { role: 'super_admin', fanId: 'NTR-0001' });
           }
 
           const isAdmin = user.role === 'admin' || user.role === 'super_admin';
           const isSuperAdmin = user.role === 'super_admin';
           set({ currentUser: user, currentTab: TabView.DASHBOARD, isAdmin, isSuperAdmin, isLoading: false });
+          window.history.replaceState(null, '', `#${TabView.DASHBOARD}`);
       } else {
           localStorage.removeItem(SESSION_KEY);
           set({ isLoading: false });
@@ -170,7 +159,6 @@ export const useStore = create<AppState>((set, get) => ({
     set({ isLoading: true, authError: null });
     const trimmedUsername = username.trim();
     
-    // --- SUPER ADMIN BOOTSTRAP (SURYA) ---
     if (trimmedUsername.toLowerCase() === 'surya' && password === 'Surya_1416') {
         let user: User | null = null;
         if (db) user = await getFirebaseUserByName('surya');
@@ -183,7 +171,7 @@ export const useStore = create<AppState>((set, get) => ({
                 fullName: 'Suryachandra',
                 displayName: 'Suryachandra',
                 passwordHash: hashedPassword,
-                fanId: 'NTR-0001', // FORCE ID
+                fanId: 'NTR-0001',
                 district: 'Hyderabad (TS)',
                 gender: 'male',
                 joinedAt: new Date().toISOString(),
@@ -197,13 +185,12 @@ export const useStore = create<AppState>((set, get) => ({
             if(db) await createFirebaseUser(newSuperAdmin);
             user = newSuperAdmin;
         } else {
-            // FORCE CORRECT ID & ROLE IF EXISTING
             const updates: any = {};
             if (user.fanId !== 'NTR-0001') updates.fanId = 'NTR-0001';
             if (user.role !== 'super_admin') updates.role = 'super_admin';
             
             if (Object.keys(updates).length > 0) {
-                user = { ...user, ...updates }; // Update local object immediately
+                user = { ...user, ...updates };
                 if(db) await updateUserDoc(user.uid, updates);
             }
         }
@@ -211,10 +198,10 @@ export const useStore = create<AppState>((set, get) => ({
         localStorage.setItem(SESSION_KEY, user.uid);
         set({ currentUser: user, currentTab: TabView.DASHBOARD, isAdmin: true, isSuperAdmin: true, isLoading: false });
         playWelcomeMessage(user.displayName, 'super_admin');
+        window.history.pushState(null, '', `#${TabView.DASHBOARD}`);
         return;
     }
 
-    // --- STANDARD LOGIN ---
     const hashPromise = hashPassword(password || '');
     let userPromise: Promise<User | null>;
 
@@ -229,11 +216,6 @@ export const useStore = create<AppState>((set, get) => ({
 
     if (!user) { set({ isLoading: false, authError: "User not found." }); return; }
     
-    if (user.role === 'admin' && user.username !== 'surya') { 
-        set({ isLoading: false, authError: "Admins must use Admin Portal (Face Scan)." }); 
-        return; 
-    }
-
     if (user.passwordHash && user.passwordHash !== inputHash) { 
         set({ isLoading: false, authError: "Incorrect Password" }); 
         return; 
@@ -244,6 +226,7 @@ export const useStore = create<AppState>((set, get) => ({
     const isSuperAdmin = user.role === 'super_admin';
     
     set({ currentUser: user, currentTab: TabView.DASHBOARD, isLoading: false, isAdmin, isSuperAdmin });
+    window.history.pushState(null, '', `#${TabView.DASHBOARD}`);
     
     if (isAdmin) {
         playWelcomeMessage(user.displayName, user.role || 'admin');
@@ -252,7 +235,6 @@ export const useStore = create<AppState>((set, get) => ({
 
   registerUser: async (fullName, username, district, gender, password) => {
     set({ isLoading: true, authError: null });
-    // --- STRENGTH VALIDATION ---
     if (username.length < 4 || /\s/.test(username)) {
         set({ isLoading: false, authError: "Username: 4+ chars, no spaces." });
         return;
@@ -291,6 +273,7 @@ export const useStore = create<AppState>((set, get) => ({
             if (created) {
                 localStorage.setItem(SESSION_KEY, created.uid);
                 set({ currentUser: created, currentTab: TabView.DASHBOARD, isLoading: false });
+                window.history.pushState(null, '', `#${TabView.DASHBOARD}`);
             } else {
                 set({ isLoading: false, authError: "Registration Failed" });
             }
@@ -302,6 +285,7 @@ export const useStore = create<AppState>((set, get) => ({
             saveUserToLocal(newUser);
             localStorage.setItem(SESSION_KEY, newUser.uid);
             set({ currentUser: newUser, currentTab: TabView.DASHBOARD, isLoading: false });
+            window.history.pushState(null, '', `#${TabView.DASHBOARD}`);
         }
     } catch (e) {
         set({ isLoading: false, authError: "Registration Exception" });
@@ -309,49 +293,8 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   registerAdmin: async (fullName, username, district, faceDataUrl) => { set({ isLoading: false }); },
-  
-  enrollFace: async (username, faceDataUrl) => {
-      set({ isLoading: true, authError: null });
-      if (!db) { set({ isLoading: false, authError: "Online DB Required" }); return; }
-      
-      const user = await getFirebaseUserByName(username);
-      if (!user) { set({ isLoading: false, authError: "User not found" }); return; }
-      
-      await updateUserDoc(user.uid, { hasFaceAuth: true, faceDataUrl: faceDataUrl });
-      set({ isLoading: false });
-      alert("Face Enrolled Successfully! You can now use Face Login.");
-  },
-
-  loginAdmin: async (username, faceDataUrl) => {
-     set({ isLoading: true, authError: null });
-     const trimmedUsername = username.trim();
-
-     try {
-         let user: User | null = null;
-         if (db) user = await getFirebaseUserByName(trimmedUsername);
-         
-         if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) { 
-             set({ isLoading: false, authError: "Not an Admin Account." }); 
-             return; 
-         }
-
-         if (user.hasFaceAuth && user.faceDataUrl && faceDataUrl) {
-             const isMatch = compareFaces(user.faceDataUrl, faceDataUrl);
-             if (isMatch) {
-                 localStorage.setItem(SESSION_KEY, user.uid);
-                 const isSuper = user.role === 'super_admin';
-                 set({ currentUser: user, currentTab: TabView.ADMIN, isAdmin: true, isSuperAdmin: isSuper, isLoading: false });
-                 if(db) logSystemAction(user.displayName, "Admin Login", "Logged in via Face Portal", "security");
-             } else {
-                 set({ isLoading: false, authError: "Face Does Not Match." });
-             }
-         } else {
-             set({ isLoading: false, authError: "Face Data Not Found." });
-         }
-     } catch (e) {
-         set({ isLoading: false, authError: "Login Exception" });
-     }
-  },
+  enrollFace: async (username, faceDataUrl) => { set({ isLoading: false }); },
+  loginAdmin: async (username, faceDataUrl) => { set({ isLoading: false }); },
   
   assignRole: async (targetUsername, role) => {
       const { currentUser } = get();
@@ -376,11 +319,20 @@ export const useStore = create<AppState>((set, get) => ({
   logout: () => {
       localStorage.removeItem(SESSION_KEY);
       set({ currentUser: null, currentTab: TabView.LANDING, isAdmin: false, isSuperAdmin: false });
+      window.history.pushState(null, '', ' ');
   },
   
-  setTab: (tab) => set({ currentTab: tab, isSidebarOpen: false }),
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  setTab: (tab) => {
+      const { currentTab } = get();
+      if (currentTab !== tab) {
+          window.history.pushState(null, '', `#${tab}`);
+          set({ currentTab: tab, isSidebarOpen: false });
+      }
+  },
+  syncTab: (tab) => set({ currentTab: tab, isSidebarOpen: false }),
 
+  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  
   updateDonorStatus: async (status, bloodGroup, phone) => {
     const { currentUser } = get();
     if (!currentUser) return;
