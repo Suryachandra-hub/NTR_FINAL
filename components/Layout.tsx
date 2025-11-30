@@ -1,23 +1,37 @@
-
 import React from 'react';
 import { useStore } from '../store';
 import { TabView } from '../types';
-import { Menu, Home, Film, User, Activity, Shield, X, Crown, MessageSquare, Eye, EyeOff, Radio, LogOut, LogIn } from 'lucide-react';
+import { Menu, Home, Film, User, Activity, Shield, X, Crown, MessageSquare, Eye, EyeOff, Radio, LogOut, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Navbar = () => {
-  const { toggleSidebar, isTigerBackgroundActive, toggleTigerBackground, currentUser, logout, setTab } = useStore();
+  const { toggleSidebar, isTigerBackgroundActive, toggleTigerBackground, currentUser, logout, setTab, currentTab } = useStore();
 
   // FORCE OVERRIDE for surya
   const isSurya = currentUser?.username?.toLowerCase() === 'surya';
   const isUserAdmin = isSurya || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
+  const handleBack = () => {
+      setTab(TabView.DASHBOARD);
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 h-16 glass-panel border-b-0 border-b-white/10 flex items-center justify-between px-4 lg:px-8">
       <div className="flex items-center gap-3">
-        <button onClick={toggleSidebar} className="lg:hidden text-white hover:text-ntr-orange transition">
-          <Menu size={24} />
-        </button>
+        {/* LOGIC: Show Back Arrow if NOT on Dashboard, otherwise Show Menu */}
+        {currentTab !== TabView.DASHBOARD ? (
+            <button 
+                onClick={handleBack} 
+                className="lg:hidden text-white hover:text-ntr-orange transition flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 active:scale-95"
+            >
+                <ArrowLeft size={20} />
+            </button>
+        ) : (
+            <button onClick={toggleSidebar} className="lg:hidden text-white hover:text-ntr-orange transition">
+                <Menu size={24} />
+            </button>
+        )}
+
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setTab(TabView.DASHBOARD)}>
            <div className="w-8 h-8 rounded bg-gradient-to-tr from-ntr-gold to-yellow-600 flex items-center justify-center font-bold text-black font-royal">N</div>
            <span className="font-royal font-bold text-xl tracking-wider text-white">NTR <span className="text-ntr-orange">WORLD</span></span>
@@ -111,6 +125,7 @@ export const Sidebar = () => {
     { tab: TabView.CHAT, label: 'Tiger Talk AI', icon: MessageSquare },
     { tab: TabView.MOVIES, label: 'Movies Universe', icon: Film },
     { tab: TabView.FANZONE, label: 'Fan Zone (Profile)', icon: User },
+    // RADAR REMOVED
     { tab: TabView.LEADERBOARD, label: 'Leaderboard', icon: Crown },
     { tab: TabView.EMERGENCY, label: 'Donor Network', icon: Activity, alert: true },
   ];
