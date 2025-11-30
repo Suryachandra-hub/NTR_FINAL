@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { DISTRICTS } from '../constants';
@@ -44,7 +43,7 @@ export const Landing = () => {
   const [instruction, setInstruction] = useState("Initializing Neural Core...");
   const [scanStatus, setScanStatus] = useState<'init' | 'scanning' | 'blink-1' | 'open-1' | 'blink-2' | 'processing' | 'success'>('init');
   const [blinkCount, setBlinkCount] = useState(0);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number | null>(null);
 
   // --- ANIMATION TIMELINE ---
   useEffect(() => {
